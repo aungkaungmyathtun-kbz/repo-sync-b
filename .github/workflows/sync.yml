@@ -1,26 +1,59 @@
-name: CI/CD Pipeline
+name: Sync main to repo-sync-b (syn-branch)
 
 on:
   push:
-    branches:
-      - main
+    branches: ["main"]
+  workflow_dispatch:
 
+permissions:
+  contents: read
 
 jobs:
-  build:
+  sync:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Checkout Repo A
+        uses: actions/checkout@v4
         with:
-          node-version: '20'
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Install dependencies
-        run: npm install
+      - name: Setup SSH for Repo B (deploy key)
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.REPO_B_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-      - name: Build project
-        run: npm run build
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+      - name: Add Repo B remote
+        run: |
+          git remote add repo-b git@github.com:aungkaungmyathtun-kbz/repo-sync-b.git
+
+      - name: Sync to Repo B syn-branch (NO force)
+        run: |
+          set -e
+
+          git fetch repo-b || true
+
+          if git show-ref --verify --quiet refs/remotes/repo-b/syn-branch; then
+            echo "Repo B syn-branch exists -> merge from Repo A main"
+            git checkout -B syn-branch repo-b/syn-branch
+            git merge --no-ff --no-edit origin/main
+          else
+            echo "Repo B syn-branch does not exist -> create from Repo A main"
+            git checkout -B syn-branch origin/main
+          fi
+
+          # Optional: don't copy workflows to Repo B
+          rm -rf .github/workflows
+
+          git add -A
+          git commit -m "Sync from Repo A main (${GITHUB_SHA})" || echo "No changes to commit"
+
+          git push repo-b syn-branch
