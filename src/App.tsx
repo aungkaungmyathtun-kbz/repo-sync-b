@@ -10,6 +10,7 @@ function App() {
   return (
     <>
         <h3>This is repo Sync to repo b</h3>
+        <p>akmh sync-repo</p>
     </>
   )
 }
