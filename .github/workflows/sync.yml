@@ -27,7 +27,6 @@ jobs:
           # Add Repo B as a remote
           git remote add repo-b https://x-access-token:${{ secrets.POWER_SYNC_MAIN }}@github.com/aungkaungmyathtun-kbz/repo-sync-b.git
 
-          # Fetch temp-sync branch if it exists
           if git ls-remote --exit-code --heads repo-b temp-sync; then
             git fetch repo-b temp-sync:temp-sync
             git checkout temp-sync
