@@ -1,46 +1,26 @@
-name: Sync to Repo B temp-sync safely
-
-permissions:
-  contents: read
+name: CI/CD Pipeline
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
+
 
 jobs:
-  sync:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repo A
-        uses: actions/checkout@v3
-        with:
-          persist-credentials: false
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '24'
+          node-version: '16'
 
-      - name: Push to temp-sync branch in Repo B
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
+      - name: Install dependencies
+        run: npm install
 
-          git remote add repo-b https://x-access-token:${{ secrets.POWER_SYNC_MAIN }}@github.com/aungkaungmyathtun-kbz/repo-sync-b.git
-
-          if git ls-remote --exit-code --heads repo-b temp-sync; then
-            git fetch repo-b temp-sync:temp-sync
-            git checkout temp-sync
-            git checkout main -- .
-            git rm -r .github/workflows || true
-            git commit -m "Update temp-sync with changes from main" || echo "No changes to commit"
-          else
-            git checkout -b temp-sync
-            git rm -r .github/workflows || true
-            git commit -m "Create temp-sync from main" || echo "Nothing to commit"
-          fi
-
-          git push repo-b temp-sync
-          git checkout main
+      - name: Run tests
+        run: npm test
